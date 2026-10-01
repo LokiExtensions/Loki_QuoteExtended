@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<components xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:noNamespaceSchemaLocation="urn:magento:module:Loki_Components:etc/loki_components.xsd">
+    <group
+        name="quoteExtendedFields"
+        class="Loki\Field\Component\Base\Field\FieldComponent"
+        context="LokiCheckout\Core\Component\Base\Generic\CheckoutContext"
+        viewModel="Loki\QuoteExtended\Component\QuoteExtendedField\QuoteExtendedFieldViewModel"
+        repository="Loki\QuoteExtended\Component\QuoteExtendedField\QuoteExtendedFieldRepository">
+        <target name="loki-checkout.sidebar.preview.quote_details"/>
+    </group>
+</components>

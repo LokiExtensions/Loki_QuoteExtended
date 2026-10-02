@@ -1,8 +1,5 @@
 <?php
-<<<<<<< HEAD
-=======
 
->>>>>>> 9959069 (feat: add loki_quote_extended table with model and repository)
 declare(strict_types=1);
 
 namespace Loki\QuoteExtended\Model\ResourceModel;
@@ -11,13 +8,6 @@ use Magento\Framework\Model\ResourceModel\Db\AbstractDb;
 
 class QuoteExtended extends AbstractDb
 {
-<<<<<<< HEAD
-    protected $connectionName = 'checkout';
-
-    protected function _construct(): void
-    {
-        $this->_init('loki_quote_extended', 'id');
-=======
     public const TABLE_NAME = 'loki_quote_extended';
     public const PRIMARY_KEY = 'entity_id';
 
@@ -32,6 +22,5 @@ class QuoteExtended extends AbstractDb
             $this->getMainTable(),
             ['quote_id IS NULL', 'order_id IS NULL']
         );
->>>>>>> 9959069 (feat: add loki_quote_extended table with model and repository)
     }
 }

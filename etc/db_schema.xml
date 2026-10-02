@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+<<<<<<< HEAD
     <table name="loki_quote_extended" resource="checkout" engine="innodb" comment="Loki Quote Extended">
         <column name="id" xsi:type="int" identity="true" unsigned="true" nullable="false" comment="ID"/>
         <column name="quote_id" xsi:type="int" unsigned="true" nullable="false" comment="Quote ID"/>
@@ -9,10 +10,22 @@
 
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="id"/>
+=======
+    <table name="loki_quote_extended" resource="default" engine="innodb" comment="Loki Quote Extended">
+        <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="int" name="quote_id" unsigned="true" nullable="true" comment="Quote ID"/>
+        <column xsi:type="int" name="order_id" unsigned="true" nullable="true" comment="Order ID"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+>>>>>>> 9959069 (feat: add loki_quote_extended table with model and repository)
         </constraint>
         <constraint xsi:type="unique" referenceId="LOKI_QUOTE_EXTENDED_QUOTE_ID">
             <column name="quote_id"/>
         </constraint>
+<<<<<<< HEAD
         <constraint xsi:type="foreign"
                     referenceId="LOKI_QUOTE_EXTENDED_QUOTE_ID_QUOTE_ENTITY_ID"
                     table="loki_quote_extended"
@@ -20,5 +33,16 @@
                     referenceTable="quote"
                     referenceColumn="entity_id"
                     onDelete="CASCADE"/>
+=======
+        <constraint xsi:type="unique" referenceId="LOKI_QUOTE_EXTENDED_ORDER_ID">
+            <column name="order_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="LOKI_QUOTE_EXTENDED_QUOTE_ID_QUOTE_ENTITY_ID"
+                    table="loki_quote_extended" column="quote_id"
+                    referenceTable="quote" referenceColumn="entity_id" onDelete="SET NULL"/>
+        <constraint xsi:type="foreign" referenceId="LOKI_QUOTE_EXTENDED_ORDER_ID_SALES_ORDER_ENTITY_ID"
+                    table="loki_quote_extended" column="order_id"
+                    referenceTable="sales_order" referenceColumn="entity_id" onDelete="CASCADE"/>
+>>>>>>> 9959069 (feat: add loki_quote_extended table with model and repository)
     </table>
 </schema>

@@ -1,0 +1,18 @@
+{
+    "loki_quote_extended": {
+        "column": {
+            "entity_id": true,
+            "quote_id": true,
+            "order_id": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "LOKI_QUOTE_EXTENDED_QUOTE_ID": true,
+            "LOKI_QUOTE_EXTENDED_ORDER_ID": true,
+            "LOKI_QUOTE_EXTENDED_QUOTE_ID_QUOTE_ENTITY_ID": true,
+            "LOKI_QUOTE_EXTENDED_ORDER_ID_SALES_ORDER_ENTITY_ID": true
+        }
+    }
+}

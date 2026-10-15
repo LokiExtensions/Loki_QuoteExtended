@@ -12,6 +12,7 @@ use Magento\Checkout\Test\Fixture\SetGuestEmail as SetGuestEmailFixture;
 use Magento\Checkout\Test\Fixture\SetPaymentMethod as SetPaymentMethodFixture;
 use Magento\Checkout\Test\Fixture\SetShippingAddress as SetShippingAddressFixture;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\Registry;
 use Magento\Quote\Model\Quote;
 use Magento\Quote\Model\ResourceModel\Quote as QuoteResource;
 use Magento\Quote\Test\Fixture\AddProductToCart as AddProductToCartFixture;
@@ -22,7 +23,6 @@ use Magento\TestFramework\Fixture\DataFixture;
 use Magento\TestFramework\Fixture\DataFixtureStorage;
 use Magento\TestFramework\Fixture\DataFixtureStorageManager;
 use Magento\TestFramework\Fixture\DbIsolation;
-use Magento\TestFramework\Helper\Bootstrap;
 use PHPUnit\Framework\TestCase;
 
 #[
@@ -146,7 +146,13 @@ class QuoteExtendedRepositoryTest extends TestCase
         $saved = $this->saveQuoteExtended($cartId);
         $order = $this->placeOrder($cartId);
 
-        Bootstrap::getObjectManager()->get(OrderRepositoryInterface::class)->delete($order);
+        $registry = $this->om()->get(Registry::class);
+        $registry->register('isSecureArea', true, true);
+        try {
+            $this->om()->get(OrderRepositoryInterface::class)->delete($order);
+        } finally {
+            $registry->unregister('isSecureArea');
+        }
 
         $this->assertEmpty($this->loadQuoteExtended((int)$saved->getId())->getId());
     }

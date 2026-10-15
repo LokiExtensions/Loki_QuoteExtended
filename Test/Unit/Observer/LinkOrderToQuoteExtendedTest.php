@@ -10,6 +10,7 @@ use Loki\QuoteExtended\Repository\QuoteExtendedRepository;
 use Magento\Framework\DataObject;
 use Magento\Framework\Event;
 use Magento\Framework\Event\Observer;
+use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -66,6 +67,51 @@ class LinkOrderToQuoteExtendedTest extends TestCase
         $this->quoteExtendedRepository->expects($this->never())->method('getByQuoteId');
 
         $this->createObserver()->execute($this->createEventObserver(42, 0));
+    }
+
+    public function testDoesNothingWhenAlreadyLinkedToSameOrder(): void
+    {
+        $quoteExtended = $this->createQuoteExtended(['entity_id' => 1, 'quote_id' => 42, 'order_id' => 7]);
+
+        $this->quoteExtendedRepository->method('getByQuoteId')->with(42)->willReturn($quoteExtended);
+        $this->quoteExtendedRepository->expects($this->never())->method('detachFromQuote');
+        $this->quoteExtendedRepository->expects($this->never())->method('save');
+
+        $this->createObserver()->execute($this->createEventObserver(42, 7));
+    }
+
+    public function testDoesNothingWithoutQuoteId(): void
+    {
+        $this->quoteExtendedRepository->expects($this->never())->method('getByQuoteId');
+
+        $this->createObserver()->execute($this->createEventObserver(0, 7));
+    }
+
+    public function testDoesNothingWithoutQuoteAndOrderObjects(): void
+    {
+        $this->quoteExtendedRepository->expects($this->never())->method('getByQuoteId');
+
+        $this->createObserver()->execute(new Observer(['event' => new Event([])]));
+    }
+
+    public function testLogsErrorWhenSaveFails(): void
+    {
+        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42]);
+
+        $this->quoteExtendedRepository->method('getByQuoteId')->willReturn($quoteExtended);
+        $this->quoteExtendedRepository->method('save')
+            ->willThrowException(new CouldNotSaveException(__('Database is gone')));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('error')->with(
+            $this->stringContains('Could not link order'),
+            $this->callback(fn (array $context) => $context['quote_id'] === 42
+                && $context['order_id'] === 7
+                && $context['exception'] === 'Database is gone')
+        );
+
+        (new LinkOrderToQuoteExtended($this->quoteExtendedRepository, $logger))
+            ->execute($this->createEventObserver(42, 7));
     }
 
     private function createQuoteExtended(array $data): QuoteExtended

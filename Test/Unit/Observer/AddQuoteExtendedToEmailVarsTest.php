@@ -62,6 +62,25 @@ class AddQuoteExtendedToEmailVarsTest extends TestCase
         $this->assertFalse($transport->hasData('loki_quote_extended'));
     }
 
+    public function testSkipsInvalidTransport(): void
+    {
+        $this->quoteExtendedRepository->expects($this->never())->method('getByOrder');
+
+        $this->createObserver()->execute(
+            new Observer(['event' => new Event(['transportObject' => ['order' => 'invalid']])])
+        );
+    }
+
+    public function testSkipsTransportWithInvalidOrder(): void
+    {
+        $this->quoteExtendedRepository->expects($this->never())->method('getByOrder');
+
+        $transport = new DataObject(['order' => new DataObject(['entity_id' => 7])]);
+        $this->createObserver()->execute($this->createEventObserver($transport));
+
+        $this->assertFalse($transport->hasData('loki_quote_extended'));
+    }
+
     private function createObserver(): AddQuoteExtendedToEmailVars
     {
         return new AddQuoteExtendedToEmailVars($this->quoteExtendedRepository);

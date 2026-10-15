@@ -93,6 +93,43 @@ class QuoteExtendedFieldRepositoryTest extends TestCase
         $repository->saveValue('foobar');
     }
 
+    public function testSaveValueStoresNullForNonScalarValue(): void
+    {
+        $this->checkoutState->method('getQuoteId')->willReturn(42);
+        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42, 'example_field' => 'old']);
+        $this->quoteExtendedRepository->method('getOrCreateByQuoteId')->willReturn($quoteExtended);
+        $this->quoteExtendedRepository->expects($this->once())->method('save')->with($quoteExtended);
+
+        $repository = $this->createRepository('loki-checkout.customer.example_field');
+        $repository->saveValue(['foo' => 'bar']);
+
+        $this->assertNull($quoteExtended->getData('example_field'));
+    }
+
+    public function testGetValueCastsValueToString(): void
+    {
+        $this->checkoutState->method('getQuoteId')->willReturn(42);
+        $this->quoteExtendedRepository->method('getByQuoteId')
+            ->willReturn($this->createQuoteExtended(['quote_id' => 42, 'example_field' => 12]));
+
+        $repository = $this->createRepository('loki-checkout.customer.example_field');
+
+        $this->assertSame('12', $repository->getValue());
+    }
+
+    public function testSaveValueUsesFieldNameArgumentAsColumn(): void
+    {
+        $this->checkoutState->method('getQuoteId')->willReturn(42);
+        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42]);
+        $this->quoteExtendedRepository->method('getOrCreateByQuoteId')->willReturn($quoteExtended);
+
+        $repository = $this->createRepository('loki-checkout.customer.example_field', 'other_field');
+        $repository->saveValue('foobar');
+
+        $this->assertSame('foobar', $quoteExtended->getData('other_field'));
+        $this->assertFalse($quoteExtended->hasData('example_field'));
+    }
+
     private function createRepository(string $componentName, string $fieldName = ''): QuoteExtendedFieldRepository
     {
         $component = $this->createMock(ComponentInterface::class);

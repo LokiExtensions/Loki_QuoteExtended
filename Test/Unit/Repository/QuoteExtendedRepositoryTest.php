@@ -83,6 +83,7 @@ class QuoteExtendedRepositoryTest extends TestCase
 
         $this->assertNull($quoteExtended->getData('entity_id'));
         $this->assertSame(42, $quoteExtended->getQuoteId());
+        $this->assertCount(0, $this->savedRows);
     }
 
     public function testGetOrCreateByQuoteIdReturnsUnlinkedRow(): void
@@ -109,6 +110,19 @@ class QuoteExtendedRepositoryTest extends TestCase
         $this->expectException(NoSuchEntityException::class);
 
         (new QuoteExtendedRepository($resource, $factory))->getByQuoteId(0);
+    }
+
+    public function testGetByOrderIdDoesNotLoadInvalidId(): void
+    {
+        $resource = $this->createMock(QuoteExtendedResource::class);
+        $resource->expects($this->never())->method('load');
+
+        $factory = $this->createMock(QuoteExtendedFactory::class);
+        $factory->method('create')->willReturn($this->createQuoteExtended());
+
+        $this->expectException(NoSuchEntityException::class);
+
+        (new QuoteExtendedRepository($resource, $factory))->getByOrderId(0);
     }
 
     public function testGetByOrderRethrowsWithoutQuoteId(): void

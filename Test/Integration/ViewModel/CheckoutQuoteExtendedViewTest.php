@@ -7,6 +7,13 @@ namespace Loki\QuoteExtended\Test\Integration\ViewModel;
 use Loki\QuoteExtended\Test\Integration\Trait\QuoteExtendedTestTrait;
 use Loki\QuoteExtended\ViewModel\CheckoutQuoteExtendedView;
 use LokiCheckout\Core\ViewModel\CheckoutState;
+use Magento\Catalog\Test\Fixture\Product as ProductFixture;
+use Magento\Checkout\Test\Fixture\SetBillingAddress as SetBillingAddressFixture;
+use Magento\Checkout\Test\Fixture\SetDeliveryMethod as SetDeliveryMethodFixture;
+use Magento\Checkout\Test\Fixture\SetGuestEmail as SetGuestEmailFixture;
+use Magento\Checkout\Test\Fixture\SetPaymentMethod as SetPaymentMethodFixture;
+use Magento\Checkout\Test\Fixture\SetShippingAddress as SetShippingAddressFixture;
+use Magento\Quote\Test\Fixture\AddProductToCart as AddProductToCartFixture;
 use Magento\Quote\Test\Fixture\GuestCart as GuestCartFixture;
 use Magento\TestFramework\Fixture\AppArea;
 use Magento\TestFramework\Fixture\DataFixture;
@@ -44,6 +51,31 @@ class CheckoutQuoteExtendedViewTest extends TestCase
         $viewModel = $this->createViewModel($this->getCartId('cart'));
 
         $this->assertSame('', $viewModel->getValue('entity_id'));
+    }
+
+    #[
+        DataFixture(ProductFixture::class, as: 'product'),
+        DataFixture(GuestCartFixture::class, as: 'order_cart'),
+        DataFixture(
+            AddProductToCartFixture::class,
+            ['cart_id' => '$order_cart.id$', 'product_id' => '$product.id$', 'qty' => 1]
+        ),
+        DataFixture(SetBillingAddressFixture::class, ['cart_id' => '$order_cart.id$']),
+        DataFixture(SetShippingAddressFixture::class, ['cart_id' => '$order_cart.id$']),
+        DataFixture(SetGuestEmailFixture::class, ['cart_id' => '$order_cart.id$']),
+        DataFixture(SetDeliveryMethodFixture::class, ['cart_id' => '$order_cart.id$']),
+        DataFixture(SetPaymentMethodFixture::class, ['cart_id' => '$order_cart.id$']),
+    ]
+    public function testGetValueAfterOrderPlacedReturnsLinkedRow(): void
+    {
+        $cartId = $this->getCartId('order_cart');
+        $saved = $this->saveQuoteExtended($cartId);
+        $order = $this->placeOrder($cartId);
+
+        $viewModel = $this->createViewModel($cartId);
+
+        $this->assertSame((string)$saved->getId(), $viewModel->getValue('entity_id'));
+        $this->assertSame((string)$order->getEntityId(), $viewModel->getValue('order_id'));
     }
 
     private function createViewModel(int $cartId): CheckoutQuoteExtendedView

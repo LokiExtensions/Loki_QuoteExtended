@@ -114,6 +114,29 @@ class LinkOrderToQuoteExtendedTest extends TestCase
             ->execute($this->createEventObserver(42, 7));
     }
 
+    public function testLogsErrorWhenDetachFails(): void
+    {
+        $quoteExtended = $this->createQuoteExtended(['entity_id' => 1, 'quote_id' => 42, 'order_id' => 6]);
+
+        $this->quoteExtendedRepository->method('getByQuoteId')->willReturn($quoteExtended);
+        $this->quoteExtendedRepository->method('detachFromQuote')
+            ->willThrowException(new CouldNotSaveException(__('Database is gone')));
+        $this->quoteExtendedRepository->expects($this->never())->method('save');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('error')->with(
+            $this->stringContains('Could not link order'),
+            $this->callback(fn (array $context) => $context['quote_id'] === 42
+                && $context['order_id'] === 7
+                && $context['exception'] === 'Database is gone')
+        );
+
+        (new LinkOrderToQuoteExtended($this->quoteExtendedRepository, $logger))
+            ->execute($this->createEventObserver(42, 7));
+
+        $this->assertSame(6, $quoteExtended->getOrderId());
+    }
+
     private function createQuoteExtended(array $data): QuoteExtended
     {
         $quoteExtended = $this->getMockBuilder(QuoteExtended::class)

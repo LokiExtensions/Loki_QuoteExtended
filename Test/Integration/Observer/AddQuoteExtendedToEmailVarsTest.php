@@ -83,6 +83,25 @@ class AddQuoteExtendedToEmailVarsTest extends TestCase
         $this->assertTemplateVariable((int)$saved->getId());
     }
 
+    public function testOrderEmailUsesOwnRowAfterQuoteRestored(): void
+    {
+        $cartId = $this->getCartId();
+        $first = $this->saveQuoteExtended($cartId);
+        $firstOrder = $this->placeOrder($cartId);
+
+        $this->restoreQuote($cartId);
+        $second = $this->saveQuoteExtended($cartId);
+        $secondOrder = $this->placeOrder($cartId);
+
+        $sender = Bootstrap::getObjectManager()->get(OrderSender::class);
+
+        $sender->send($firstOrder, true);
+        $this->assertTemplateVariable((int)$first->getId());
+
+        $sender->send($secondOrder, true);
+        $this->assertTemplateVariable((int)$second->getId());
+    }
+
     public function testOrderEmailWithoutRowHasNoVariable(): void
     {
         $order = $this->placeOrder($this->getCartId());

@@ -68,6 +68,32 @@ class OrderQuoteExtendedViewTest extends TestCase
         $this->assertSame((string)$order->getEntityId(), $viewModel->getValue('order_id'));
     }
 
+    public function testEachOrderShowsOwnRowAfterQuoteRestored(): void
+    {
+        $cartId = $this->getCartId();
+        $first = $this->saveQuoteExtended($cartId);
+        $firstOrder = $this->placeOrder($cartId);
+        $firstInvoice = $this->createInvoice($firstOrder);
+
+        $this->restoreQuote($cartId);
+        $second = $this->saveQuoteExtended($cartId);
+        $secondOrder = $this->placeOrder($cartId);
+
+        $this->assertNotSame((int)$first->getId(), (int)$second->getId());
+
+        $this->setParams(['invoice_id' => (int)$firstInvoice->getEntityId()]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+        $this->assertSame((string)$first->getId(), $viewModel->getValue('entity_id'));
+
+        $this->setParams(['order_id' => (int)$firstOrder->getEntityId()]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+        $this->assertSame((string)$first->getId(), $viewModel->getValue('entity_id'));
+
+        $this->setParams(['order_id' => (int)$secondOrder->getEntityId()]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+        $this->assertSame((string)$second->getId(), $viewModel->getValue('entity_id'));
+    }
+
     public function testGetValueForOrderWithoutRow(): void
     {
         $order = $this->placeOrder($this->getCartId());

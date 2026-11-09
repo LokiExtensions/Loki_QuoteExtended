@@ -7,3 +7,4 @@
 .playwright
 .opencode
 .gitlab-ci-local
+.yireo-extension-builder.json

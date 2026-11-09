@@ -68,7 +68,7 @@ trait QuoteExtendedTestTrait
         return $this->om()->create(InvoiceRepositoryInterface::class)->get((int)$invoiceId);
     }
 
-    private function om(): ObjectManagerInterface
+    protected function om(): ObjectManagerInterface
     {
         return Bootstrap::getObjectManager();
     }

@@ -1,6 +1,10 @@
 name: Magento 2 Static Tests
 on: ['push', 'pull_request']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   phpcs:
     name: Magento PHPCS
@@ -67,12 +71,11 @@ jobs:
           test -n "${{ secrets.LOKI_REPO_PASSWORD }}" || exit 0
           cd /tmp/magento
           composer config --global --auth http-basic.private-packages.loki-extensions.com "${{ secrets.LOKI_REPO_USERNAME }}" "${{ secrets.LOKI_REPO_PASSWORD }}"
-          composer config repositories.mirror composer https://private-packages.loki-extensions.com/
+          composer config repositories.mirror "{\"type\":\"composer\",\"url\":\"https://private-packages.loki-extensions.com/\",\"canonical\":false}"
 
       - name: Configure composer
         run: |
           cd /tmp/magento
-          composer self-update --2
           composer config --global --auth github-oauth.github.com "${{ github.token }}"
           test -f $GITHUB_WORKSPACE/.github/workflows/composer-additional.sh && source $GITHUB_WORKSPACE/.github/workflows/composer-additional.sh || true
           test -f $GITHUB_WORKSPACE/.github/workflows/composer-${MAGENTO_VERSION}.sh && source $GITHUB_WORKSPACE/.github/workflows/composer-${MAGENTO_VERSION}.sh || true
@@ -91,7 +94,7 @@ jobs:
           composer config --no-plugins allow-plugins true
           composer remove --dev magento/magento-coding-standard
           test -z "$COMPOSER_DEV_REQUIREMENTS" || composer require -n --dev $COMPOSER_DEV_REQUIREMENTS
-          composer require -n --dev --prefer-source -- phpstan/phpstan:^2.0 bitexpert/phpstan-magento:^0.42 phpstan/extension-installer
+          composer require -n --dev --prefer-dist -- phpstan/phpstan:^2.0 bitexpert/phpstan-magento:^0.42 phpstan/extension-installer
           composer require -n --prefer-source -- ${COMPOSER_NAME}:@dev
 
       - name: Run Magento 2 PHPStan Tests

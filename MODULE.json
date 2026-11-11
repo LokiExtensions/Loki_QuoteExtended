@@ -19,6 +19,7 @@
         "Magento_Directory",
         "Magento_Eav",
         "Magento_Indexer",
+        "Magento_MediaGalleryUiApi",
         "Magento_Newsletter",
         "Magento_Payment",
         "Magento_Quote",

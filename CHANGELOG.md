@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 11 November 2026
+### Fixed
+- Fix trait `om()` used in other classes as well
+
 ## [0.0.2] - 29 October 2026
 ### Fixed
 - Declare `Magento_Store` and phpunit dependencies

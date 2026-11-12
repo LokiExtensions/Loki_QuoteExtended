@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Loki\QuoteExtended\Model;
 
 use Loki\QuoteExtended\Model\ResourceModel\QuoteExtended as QuoteExtendedResource;
+use Loki\QuoteExtended\Repository\QuoteExtendedRepository;
 use Magento\Framework\Model\AbstractModel;
 
 class QuoteExtended extends AbstractModel
@@ -36,5 +37,10 @@ class QuoteExtended extends AbstractModel
     public function setOrderId(?int $orderId): self
     {
         return $this->setData('order_id', $orderId);
+    }
+
+    public function getValues(): array
+    {
+        return array_diff_key($this->getData(), array_flip(QuoteExtendedRepository::RESERVED_COLUMNS));
     }
 }

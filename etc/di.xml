@@ -1,5 +1,13 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Loki\QuoteExtended\Api\Data\QuoteExtendedValueInterface"
+                type="Loki\QuoteExtended\Model\QuoteExtendedValue"/>
+
+    <type name="Magento\Sales\Api\OrderRepositoryInterface">
+        <plugin name="Loki_QuoteExtended::addQuoteExtendedExtensionAttribute"
+                type="Loki\QuoteExtended\Plugin\Order\AddQuoteExtendedExtensionAttribute"/>
+    </type>
+
     <type name="LokiCheckout\Core\Config\LokiCheckoutModules">
         <arguments>
             <argument name="modules" xsi:type="array">

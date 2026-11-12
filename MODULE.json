@@ -40,9 +40,9 @@
     ],
     "config": [],
     "tests": {
-        "unit": 53,
-        "integration": 40,
-        "functional": 0
+        "unit": 127,
+        "integration": 91,
+        "functional": 10
     },
     "module_name": "Loki_QuoteExtended",
     "composer_name": "loki-checkout/magento2-quote-extended",
@@ -58,9 +58,11 @@
         "LokiCheckout_Core",
         "Loki_Components",
         "Loki_FieldComponents",
+        "Magento_Checkout",
         "Magento_Cron",
         "Magento_Quote",
         "Magento_Sales",
+        "Magento_Shipping",
         "Magento_Store"
     ],
     "phpcs_severity": "6",

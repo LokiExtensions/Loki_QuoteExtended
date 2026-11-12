@@ -38,6 +38,21 @@ class QuoteExtendedTest extends TestCase
 {
     use QuoteExtendedTestTrait;
 
+    private const COLUMN = 'loki_resource_test_field';
+    private const OTHER_COLUMN = 'loki_resource_test_other';
+
+    public static function setUpBeforeClass(): void
+    {
+        self::addQuoteExtendedTestColumn(self::COLUMN, 32);
+        self::addQuoteExtendedTestColumn(self::OTHER_COLUMN);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::dropQuoteExtendedTestColumn(self::COLUMN);
+        self::dropQuoteExtendedTestColumn(self::OTHER_COLUMN);
+    }
+
     public function testDeleteOrphanedRowsKeepsRowsLinkedToQuoteOrOrder(): void
     {
         $cartId = $this->getCartId('cart');
@@ -78,6 +93,61 @@ class QuoteExtendedTest extends TestCase
         $this->assertInstanceOf(QuoteExtended::class, $item);
         $this->assertSame((int)$saved->getId(), (int)$item->getId());
         $this->assertSame($cartId, $item->getQuoteId());
+    }
+
+    public function testUpsertValueInsertsRow(): void
+    {
+        $cartId = $this->getCartId('cart');
+
+        $this->getResource()->upsertValue($cartId, self::COLUMN, 'foobar');
+
+        $this->assertSame(1, $this->countQuoteExtendedRows($cartId));
+        $row = $this->getQuoteExtendedRepository()->getByQuoteId($cartId);
+        $this->assertSame('foobar', $row->getData(self::COLUMN));
+        $this->assertNull($row->getOrderId());
+    }
+
+    public function testUpsertValueUpdatesOnlyGivenColumnOfExistingRow(): void
+    {
+        $cartId = $this->getCartId('cart');
+        $saved = $this->saveQuoteExtended($cartId, [self::COLUMN => 'first', self::OTHER_COLUMN => 'other']);
+        $otherRow = $this->saveQuoteExtended($this->getCartId('other_cart'), [self::COLUMN => 'untouched']);
+
+        $this->getResource()->upsertValue($cartId, self::COLUMN, 'second');
+        $this->getResource()->upsertValue($cartId, self::COLUMN, null);
+        $this->getResource()->upsertValue($cartId, self::COLUMN, 'third');
+
+        $this->assertSame(1, $this->countQuoteExtendedRows($cartId));
+        $row = $this->loadQuoteExtended((int)$saved->getId());
+        $this->assertSame($cartId, $row->getQuoteId());
+        $this->assertSame('third', $row->getData(self::COLUMN));
+        $this->assertSame('other', $row->getData(self::OTHER_COLUMN));
+        $this->assertSame('untouched', $this->loadQuoteExtended((int)$otherRow->getId())->getData(self::COLUMN));
+    }
+
+    public function testHasColumn(): void
+    {
+        $resource = $this->getResource();
+
+        $this->assertTrue($resource->hasColumn('quote_id'));
+        $this->assertTrue($resource->hasColumn(self::COLUMN));
+        $this->assertFalse($resource->hasColumn('loki_unknown_column'));
+    }
+
+    public function testGetColumnLength(): void
+    {
+        $resource = $this->getResource();
+
+        $this->assertSame(32, $resource->getColumnLength(self::COLUMN));
+        $this->assertSame(255, $resource->getColumnLength(self::OTHER_COLUMN));
+        $this->assertNull($resource->getColumnLength('quote_id'));
+        $this->assertNull($resource->getColumnLength('created_at'));
+        $this->assertNull($resource->getColumnLength('loki_unknown_column'));
+    }
+
+    private function getResource(): QuoteExtendedResource
+    {
+        return Bootstrap::getObjectManager()->get(QuoteExtendedResource::class);
     }
 
     private function saveOrphan(): void

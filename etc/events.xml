@@ -16,4 +16,12 @@
         <observer name="Loki_QuoteExtended::addQuoteExtendedToEmailVars"
                   instance="Loki\QuoteExtended\Observer\AddQuoteExtendedToEmailVars"/>
     </event>
+    <event name="email_shipment_set_template_vars_before">
+        <observer name="Loki_QuoteExtended::addQuoteExtendedToEmailVars"
+                  instance="Loki\QuoteExtended\Observer\AddQuoteExtendedToEmailVars"/>
+    </event>
+    <event name="email_creditmemo_set_template_vars_before">
+        <observer name="Loki_QuoteExtended::addQuoteExtendedToEmailVars"
+                  instance="Loki\QuoteExtended\Observer\AddQuoteExtendedToEmailVars"/>
+    </event>
 </config>

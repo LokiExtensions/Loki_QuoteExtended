@@ -10,8 +10,10 @@ use Loki\QuoteExtended\ViewModel\Adminhtml\OrderQuoteExtendedView;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Sales\Api\Data\OrderInterface;
+use Magento\Sales\Api\CreditmemoRepositoryInterface;
 use Magento\Sales\Api\InvoiceRepositoryInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
+use Magento\Sales\Api\ShipmentRepositoryInterface;
 use Magento\Sales\Model\Order\Invoice;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -120,7 +122,9 @@ class OrderQuoteExtendedViewTest extends TestCase
             $this->quoteExtendedRepository,
             $this->request,
             $this->orderRepository,
-            $this->invoiceRepository
+            $this->invoiceRepository,
+            $this->createMock(ShipmentRepositoryInterface::class),
+            $this->createMock(CreditmemoRepositoryInterface::class)
         );
     }
 

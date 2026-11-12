@@ -58,8 +58,75 @@ class LinkOrderToQuoteExtendedTest extends TestCase
         $this->quoteExtendedRepository->method('getByQuoteId')
             ->willThrowException(new NoSuchEntityException(__('Not found')));
         $this->quoteExtendedRepository->expects($this->never())->method('save');
+        $this->quoteExtendedRepository->expects($this->never())->method('getByOrderId');
+        $this->quoteExtendedRepository->expects($this->never())->method('copyToOrder');
 
         $this->createObserver()->execute($this->createEventObserver(42, 7));
+    }
+
+    public function testCopiesRowOfParentOrderWhenQuoteHasNoRow(): void
+    {
+        $parent = $this->createQuoteExtended(['entity_id' => 1, 'quote_id' => 41, 'order_id' => 6]);
+
+        $this->quoteExtendedRepository->method('getByQuoteId')->with(42)
+            ->willThrowException(new NoSuchEntityException(__('Not found')));
+        $this->quoteExtendedRepository->expects($this->once())->method('getByOrderId')->with(6)->willReturn($parent);
+        $this->quoteExtendedRepository->expects($this->once())->method('copyToOrder')
+            ->with($parent, 42, 7)->willReturn($this->createQuoteExtended([]));
+        $this->quoteExtendedRepository->expects($this->never())->method('save');
+
+        $this->createObserver()->execute($this->createEventObserver(42, 7, 6));
+    }
+
+    public function testDoesNothingWhenParentOrderHasNoRow(): void
+    {
+        $this->quoteExtendedRepository->method('getByQuoteId')
+            ->willThrowException(new NoSuchEntityException(__('Not found')));
+        $this->quoteExtendedRepository->expects($this->once())->method('getByOrderId')->with(6)
+            ->willThrowException(new NoSuchEntityException(__('Not found')));
+        $this->quoteExtendedRepository->expects($this->never())->method('copyToOrder');
+        $this->quoteExtendedRepository->expects($this->never())->method('save');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->never())->method('error');
+
+        (new LinkOrderToQuoteExtended($this->quoteExtendedRepository, $logger))
+            ->execute($this->createEventObserver(42, 7, 6));
+    }
+
+    public function testDoesNotCopyParentWhenQuoteHasRow(): void
+    {
+        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42]);
+
+        $this->quoteExtendedRepository->method('getByQuoteId')->willReturn($quoteExtended);
+        $this->quoteExtendedRepository->expects($this->never())->method('getByOrderId');
+        $this->quoteExtendedRepository->expects($this->never())->method('copyToOrder');
+        $this->quoteExtendedRepository->expects($this->once())->method('save')->with($quoteExtended);
+
+        $this->createObserver()->execute($this->createEventObserver(42, 7, 6));
+
+        $this->assertSame(7, $quoteExtended->getOrderId());
+    }
+
+    public function testLogsErrorWhenCopyFromParentFails(): void
+    {
+        $this->quoteExtendedRepository->method('getByQuoteId')
+            ->willThrowException(new NoSuchEntityException(__('Not found')));
+        $this->quoteExtendedRepository->method('getByOrderId')
+            ->willReturn($this->createQuoteExtended(['entity_id' => 1, 'order_id' => 6]));
+        $this->quoteExtendedRepository->method('copyToOrder')
+            ->willThrowException(new CouldNotSaveException(__('Database is gone')));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('error')->with(
+            $this->stringContains('Could not link order'),
+            $this->callback(fn (array $context) => $context['quote_id'] === 42
+                && $context['order_id'] === 7
+                && $context['exception'] === 'Database is gone')
+        );
+
+        (new LinkOrderToQuoteExtended($this->quoteExtendedRepository, $logger))
+            ->execute($this->createEventObserver(42, 7, 6));
     }
 
     public function testDoesNothingWithoutOrderId(): void
@@ -156,11 +223,11 @@ class LinkOrderToQuoteExtendedTest extends TestCase
         );
     }
 
-    private function createEventObserver(int $quoteId, int $orderId): Observer
+    private function createEventObserver(int $quoteId, int $orderId, ?int $parentOrderId = null): Observer
     {
         $event = new Event([
             'quote' => new DataObject(['id' => $quoteId]),
-            'order' => new DataObject(['entity_id' => $orderId]),
+            'order' => new DataObject(['entity_id' => $orderId, 'relation_parent_id' => $parentOrderId]),
         ]);
 
         return new Observer(['event' => $event]);

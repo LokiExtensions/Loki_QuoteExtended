@@ -40,6 +40,27 @@ class QuoteExtendedTest extends TestCase
         $this->assertNull($quoteExtended->getOrderId());
     }
 
+    public function testGetValuesStripsReservedColumns(): void
+    {
+        $quoteExtended = $this->createQuoteExtended([
+            'entity_id' => 1,
+            'quote_id' => 42,
+            'order_id' => 7,
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => '2026-01-01 00:00:00',
+            'example_field' => 'foobar',
+            'empty_field' => null,
+        ]);
+
+        $this->assertSame(['example_field' => 'foobar', 'empty_field' => null], $quoteExtended->getValues());
+    }
+
+    public function testGetValuesReturnsEmptyArrayWithoutValues(): void
+    {
+        $this->assertSame([], $this->createQuoteExtended([])->getValues());
+        $this->assertSame([], $this->createQuoteExtended(['entity_id' => 1, 'quote_id' => 42])->getValues());
+    }
+
     private function createQuoteExtended(array $data): QuoteExtended
     {
         $quoteExtended = $this->getMockBuilder(QuoteExtended::class)

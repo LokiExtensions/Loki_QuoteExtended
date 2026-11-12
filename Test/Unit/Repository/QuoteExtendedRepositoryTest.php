@@ -166,6 +166,50 @@ class QuoteExtendedRepositoryTest extends TestCase
         $this->assertNull($this->savedRows[0]['quote_id']);
     }
 
+    public function testCopyToOrderSavesValuesForNewQuoteAndOrder(): void
+    {
+        $source = $this->createQuoteExtended();
+        $source->setData([
+            'entity_id' => 2,
+            'quote_id' => 41,
+            'order_id' => 6,
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => '2026-01-01 00:00:00',
+            'example_field' => 'foobar',
+            'flag_field' => 1,
+        ]);
+
+        $copy = $this->createRepository()->copyToOrder($source, 42, 7);
+
+        $this->assertNotSame($source, $copy);
+        $this->assertSame([
+            'example_field' => 'foobar',
+            'flag_field' => 1,
+            'quote_id' => 42,
+            'order_id' => 7,
+        ], $copy->getData());
+        $this->assertSame([$copy->getData()], $this->savedRows);
+        $this->assertSame(2, (int)$source->getData('entity_id'));
+        $this->assertSame(41, $source->getQuoteId());
+        $this->assertSame(6, $source->getOrderId());
+    }
+
+    public function testCopyToOrderWrapsSaveException(): void
+    {
+        $resource = $this->createMock(QuoteExtendedResource::class);
+        $resource->method('save')->willThrowException(new \RuntimeException('Database is gone'));
+
+        $factory = $this->createMock(QuoteExtendedFactory::class);
+        $factory->method('create')->willReturnCallback(fn () => $this->createQuoteExtended());
+
+        $repository = new QuoteExtendedRepository($resource, $factory, $this->createMock(LoggerInterface::class));
+
+        $this->expectException(CouldNotSaveException::class);
+        $this->expectExceptionMessage('Database is gone');
+
+        $repository->copyToOrder($this->createQuoteExtended(), 42, 7);
+    }
+
     public function testSaveWrapsResourceException(): void
     {
         $resource = $this->createMock(QuoteExtendedResource::class);

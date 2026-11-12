@@ -30,19 +30,11 @@ class QuoteExtendedFieldRepository extends FieldRepository
 
     public function saveValue(mixed $value): void
     {
-        $fieldName = $this->getFieldName();
-        if (in_array($fieldName, QuoteExtendedRepository::RESERVED_COLUMNS, true)) {
-            return;
-        }
-
-        $quoteId = $this->checkoutState->getQuoteId();
-        if ($quoteId < 1) {
-            return;
-        }
-
-        $quoteExtended = $this->quoteExtendedRepository->getOrCreateByQuoteId($quoteId);
-        $quoteExtended->setData($fieldName, is_scalar($value) ? $value : null);
-        $this->quoteExtendedRepository->save($quoteExtended);
+        $this->quoteExtendedRepository->saveValue(
+            $this->checkoutState->getQuoteId(),
+            $this->getFieldName(),
+            $value
+        );
     }
 
     public function getFieldName(): string

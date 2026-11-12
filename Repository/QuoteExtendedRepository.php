@@ -8,9 +8,11 @@ use Exception;
 use Loki\QuoteExtended\Model\QuoteExtended;
 use Loki\QuoteExtended\Model\QuoteExtendedFactory;
 use Loki\QuoteExtended\Model\ResourceModel\QuoteExtended as QuoteExtendedResource;
+use Magento\Framework\Exception\CouldNotDeleteException;
 use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Sales\Api\Data\OrderInterface;
+use Psr\Log\LoggerInterface;
 
 class QuoteExtendedRepository
 {
@@ -18,7 +20,8 @@ class QuoteExtendedRepository
 
     public function __construct(
         private readonly QuoteExtendedResource $resource,
-        private readonly QuoteExtendedFactory $quoteExtendedFactory
+        private readonly QuoteExtendedFactory $quoteExtendedFactory,
+        private readonly LoggerInterface $logger
     ) {
     }
 
@@ -93,6 +96,72 @@ class QuoteExtendedRepository
         }
 
         return $quoteExtended;
+    }
+
+    public function delete(QuoteExtended $quoteExtended): void
+    {
+        try {
+            $this->resource->delete($quoteExtended);
+        } catch (Exception $exception) {
+            throw new CouldNotDeleteException(
+                __('Could not delete the extended quote data: %1', $exception->getMessage()),
+                $exception
+            );
+        }
+    }
+
+    public function saveValue(int $quoteId, string $column, mixed $value): void
+    {
+        if ($quoteId < 1 || in_array($column, self::RESERVED_COLUMNS, true)) {
+            return;
+        }
+
+        if (!$this->resource->hasColumn($column)) {
+            $this->logger->error('Loki_QuoteExtended: Unknown column', ['column' => $column]);
+            return;
+        }
+
+        $value = $this->normalizeValue($column, $value);
+
+        try {
+            $quoteExtended = $this->getByQuoteId($quoteId);
+        } catch (NoSuchEntityException) {
+            $quoteExtended = null;
+        }
+
+        if ($quoteExtended !== null && $quoteExtended->getOrderId() !== null) {
+            $quoteExtended = $this->detachFromQuote($quoteExtended);
+            $quoteExtended->setData($column, $value);
+            $this->save($quoteExtended);
+            return;
+        }
+
+        try {
+            $this->resource->upsertValue($quoteId, $column, $value);
+        } catch (Exception $exception) {
+            throw new CouldNotSaveException(
+                __('Could not save the extended quote data: %1', $exception->getMessage()),
+                $exception
+            );
+        }
+    }
+
+    private function normalizeValue(string $column, mixed $value): mixed
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return (int)$value;
+        }
+
+        $length = $this->resource->getColumnLength($column);
+        if (is_string($value) && $length !== null && mb_strlen($value) > $length) {
+            return mb_substr($value, 0, $length);
+        }
+
+        return $value;
     }
 
     private function getByField(string $field, int $value): QuoteExtended

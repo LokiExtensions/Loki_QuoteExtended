@@ -39,10 +39,10 @@ class QuoteExtendedFieldRepositoryTest extends TestCase
         $this->assertSame('other_field', $repository->getFieldName());
     }
 
-    public function testSaveValueRefusesReservedColumns(): void
+    public function testSaveValueDelegatesReservedColumnsToRepository(): void
     {
         $this->checkoutState->method('getQuoteId')->willReturn(42);
-        $this->quoteExtendedRepository->expects($this->never())->method('save');
+        $this->quoteExtendedRepository->expects($this->once())->method('saveValue')->with(42, 'order_id', '1');
 
         $repository = $this->createRepository('loki-checkout.customer.order_id');
         $repository->saveValue('1');
@@ -73,37 +73,31 @@ class QuoteExtendedFieldRepositoryTest extends TestCase
     public function testSaveValueStoresColumnValue(): void
     {
         $this->checkoutState->method('getQuoteId')->willReturn(42);
-        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42]);
-        $this->quoteExtendedRepository->method('getOrCreateByQuoteId')->with(42)->willReturn($quoteExtended);
-        $this->quoteExtendedRepository->expects($this->once())->method('save')->with($quoteExtended);
+        $this->quoteExtendedRepository->expects($this->once())->method('saveValue')
+            ->with(42, 'example_field', 'foobar');
 
         $repository = $this->createRepository('loki-checkout.customer.example_field');
         $repository->saveValue('foobar');
-
-        $this->assertSame('foobar', $quoteExtended->getData('example_field'));
     }
 
-    public function testSaveValueDoesNothingWithoutQuote(): void
+    public function testSaveValuePassesQuoteIdFromCheckoutState(): void
     {
         $this->checkoutState->method('getQuoteId')->willReturn(0);
-        $this->quoteExtendedRepository->expects($this->never())->method('getOrCreateByQuoteId');
-        $this->quoteExtendedRepository->expects($this->never())->method('save');
+        $this->quoteExtendedRepository->expects($this->once())->method('saveValue')
+            ->with(0, 'example_field', 'foobar');
 
         $repository = $this->createRepository('loki-checkout.customer.example_field');
         $repository->saveValue('foobar');
     }
 
-    public function testSaveValueStoresNullForNonScalarValue(): void
+    public function testSaveValuePassesValueUnchanged(): void
     {
         $this->checkoutState->method('getQuoteId')->willReturn(42);
-        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42, 'example_field' => 'old']);
-        $this->quoteExtendedRepository->method('getOrCreateByQuoteId')->willReturn($quoteExtended);
-        $this->quoteExtendedRepository->expects($this->once())->method('save')->with($quoteExtended);
+        $this->quoteExtendedRepository->expects($this->once())->method('saveValue')
+            ->with(42, 'example_field', ['foo' => 'bar']);
 
         $repository = $this->createRepository('loki-checkout.customer.example_field');
         $repository->saveValue(['foo' => 'bar']);
-
-        $this->assertNull($quoteExtended->getData('example_field'));
     }
 
     public function testGetValueCastsValueToString(): void
@@ -120,14 +114,11 @@ class QuoteExtendedFieldRepositoryTest extends TestCase
     public function testSaveValueUsesFieldNameArgumentAsColumn(): void
     {
         $this->checkoutState->method('getQuoteId')->willReturn(42);
-        $quoteExtended = $this->createQuoteExtended(['quote_id' => 42]);
-        $this->quoteExtendedRepository->method('getOrCreateByQuoteId')->willReturn($quoteExtended);
+        $this->quoteExtendedRepository->expects($this->once())->method('saveValue')
+            ->with(42, 'other_field', 'foobar');
 
         $repository = $this->createRepository('loki-checkout.customer.example_field', 'other_field');
         $repository->saveValue('foobar');
-
-        $this->assertSame('foobar', $quoteExtended->getData('other_field'));
-        $this->assertFalse($quoteExtended->hasData('example_field'));
     }
 
     private function createRepository(string $componentName, string $fieldName = ''): QuoteExtendedFieldRepository

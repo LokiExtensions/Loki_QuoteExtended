@@ -12,6 +12,7 @@ use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Sales\Api\Data\OrderInterface;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 class QuoteExtendedRepositoryTest extends TestCase
 {
@@ -109,7 +110,7 @@ class QuoteExtendedRepositoryTest extends TestCase
 
         $this->expectException(NoSuchEntityException::class);
 
-        (new QuoteExtendedRepository($resource, $factory))->getByQuoteId(0);
+        (new QuoteExtendedRepository($resource, $factory, $this->createMock(LoggerInterface::class)))->getByQuoteId(0);
     }
 
     public function testGetByOrderIdDoesNotLoadInvalidId(): void
@@ -122,7 +123,7 @@ class QuoteExtendedRepositoryTest extends TestCase
 
         $this->expectException(NoSuchEntityException::class);
 
-        (new QuoteExtendedRepository($resource, $factory))->getByOrderId(0);
+        (new QuoteExtendedRepository($resource, $factory, $this->createMock(LoggerInterface::class)))->getByOrderId(0);
     }
 
     public function testGetByOrderRethrowsWithoutQuoteId(): void
@@ -166,7 +167,11 @@ class QuoteExtendedRepositoryTest extends TestCase
         $resource = $this->createMock(QuoteExtendedResource::class);
         $resource->method('save')->willThrowException(new \RuntimeException('Database is gone'));
 
-        $repository = new QuoteExtendedRepository($resource, $this->createMock(QuoteExtendedFactory::class));
+        $repository = new QuoteExtendedRepository(
+            $resource,
+            $this->createMock(QuoteExtendedFactory::class),
+            $this->createMock(LoggerInterface::class)
+        );
 
         $this->expectException(CouldNotSaveException::class);
         $this->expectExceptionMessage('Database is gone');
@@ -207,7 +212,7 @@ class QuoteExtendedRepositoryTest extends TestCase
         $factory = $this->createMock(QuoteExtendedFactory::class);
         $factory->method('create')->willReturnCallback(fn () => $this->createQuoteExtended());
 
-        return new QuoteExtendedRepository($resource, $factory);
+        return new QuoteExtendedRepository($resource, $factory, $this->createMock(LoggerInterface::class));
     }
 
     private function createOrder(int $orderId, int $quoteId): OrderInterface

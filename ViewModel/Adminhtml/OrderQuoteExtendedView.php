@@ -33,8 +33,13 @@ class OrderQuoteExtendedView implements ArgumentInterface
 
     public function getLabelledValues(): array
     {
+        $columns = $this->labelledColumns->getColumns();
+        if ($columns === [] || null === $this->getQuoteExtended()) {
+            return [];
+        }
+
         $labelledValues = [];
-        foreach ($this->labelledColumns->getColumns() as $column => $label) {
+        foreach ($columns as $column => $label) {
             $value = $this->getValue($column);
             if ($value === '') {
                 continue;

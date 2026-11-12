@@ -84,6 +84,16 @@ class QuoteExtendedRepository
         return $copy;
     }
 
+    public function copyToOrder(QuoteExtended $source, int $quoteId, int $orderId): QuoteExtended
+    {
+        $copy = $this->quoteExtendedFactory->create();
+        $copy->setData($source->getValues());
+        $copy->setQuoteId($quoteId);
+        $copy->setOrderId($orderId);
+
+        return $this->save($copy);
+    }
+
     public function save(QuoteExtended $quoteExtended): QuoteExtended
     {
         try {

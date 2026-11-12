@@ -21,8 +21,9 @@ class LinkOrderToQuoteExtended implements ObserverInterface
 
     public function execute(Observer $observer): void
     {
+        $order = $observer->getEvent()->getOrder();
         $quoteId = (int)$observer->getEvent()->getQuote()?->getId();
-        $orderId = (int)$observer->getEvent()->getOrder()?->getEntityId();
+        $orderId = (int)$order?->getEntityId();
         if ($quoteId < 1 || $orderId < 1) {
             return;
         }
@@ -30,6 +31,7 @@ class LinkOrderToQuoteExtended implements ObserverInterface
         try {
             $quoteExtended = $this->quoteExtendedRepository->getByQuoteId($quoteId);
         } catch (NoSuchEntityException) {
+            $this->copyFromParentOrder((int)$order->getRelationParentId(), $quoteId, $orderId);
             return;
         }
 
@@ -46,10 +48,34 @@ class LinkOrderToQuoteExtended implements ObserverInterface
             $quoteExtended->setOrderId($orderId);
             $this->quoteExtendedRepository->save($quoteExtended);
         } catch (CouldNotSaveException $exception) {
-            $this->logger->error(
-                'Loki_QuoteExtended: Could not link order to extended quote data',
-                ['quote_id' => $quoteId, 'order_id' => $orderId, 'exception' => $exception->getMessage()]
-            );
+            $this->logError($quoteId, $orderId, $exception);
         }
+    }
+
+    private function copyFromParentOrder(int $parentOrderId, int $quoteId, int $orderId): void
+    {
+        if ($parentOrderId < 1) {
+            return;
+        }
+
+        try {
+            $parent = $this->quoteExtendedRepository->getByOrderId($parentOrderId);
+        } catch (NoSuchEntityException) {
+            return;
+        }
+
+        try {
+            $this->quoteExtendedRepository->copyToOrder($parent, $quoteId, $orderId);
+        } catch (CouldNotSaveException $exception) {
+            $this->logError($quoteId, $orderId, $exception);
+        }
+    }
+
+    private function logError(int $quoteId, int $orderId, CouldNotSaveException $exception): void
+    {
+        $this->logger->error(
+            'Loki_QuoteExtended: Could not link order to extended quote data',
+            ['quote_id' => $quoteId, 'order_id' => $orderId, 'exception' => $exception->getMessage()]
+        );
     }
 }

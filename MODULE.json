@@ -62,7 +62,6 @@
         "Magento_Cron",
         "Magento_Quote",
         "Magento_Sales",
-        "Magento_Shipping",
         "Magento_Store"
     ],
     "phpcs_severity": "6",

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Loki\QuoteExtended\ViewModel\Adminhtml;
 
+use Loki\QuoteExtended\Config\LabelledColumns;
 use Loki\QuoteExtended\Model\QuoteExtended;
 use Loki\QuoteExtended\Repository\QuoteExtendedRepository;
 use Magento\Framework\App\RequestInterface;
@@ -25,8 +26,27 @@ class OrderQuoteExtendedView implements ArgumentInterface
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly InvoiceRepositoryInterface $invoiceRepository,
         private readonly ShipmentRepositoryInterface $shipmentRepository,
-        private readonly CreditmemoRepositoryInterface $creditmemoRepository
+        private readonly CreditmemoRepositoryInterface $creditmemoRepository,
+        private readonly LabelledColumns $labelledColumns
     ) {
+    }
+
+    public function getLabelledValues(): array
+    {
+        $labelledValues = [];
+        foreach ($this->labelledColumns->getColumns() as $column => $label) {
+            $value = $this->getValue($column);
+            if ($value === '') {
+                continue;
+            }
+
+            $labelledValues[] = [
+                'label' => (string)__($label),
+                'value' => $value,
+            ];
+        }
+
+        return $labelledValues;
     }
 
     public function getValue(string $column): string

@@ -1,0 +1,22 @@
+<?php
+declare(strict_types=1);
+
+use Loki\QuoteExtended\ViewModel\Adminhtml\OrderQuoteExtendedView;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+/** @var OrderQuoteExtendedView $viewModel */
+$viewModel = $block->getViewModel();
+$labelledValues = $viewModel->getLabelledValues();
+if (empty($labelledValues)) {
+    return;
+}
+?>
+<?php foreach ($labelledValues as $labelledValue): ?>
+<tr>
+    <th><?= $escaper->escapeHtml($labelledValue['label']) ?></th>
+    <td><?= $escaper->escapeHtml($labelledValue['value']) ?></td>
+</tr>
+<?php endforeach; ?>

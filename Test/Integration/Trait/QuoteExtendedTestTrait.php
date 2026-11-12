@@ -14,11 +14,17 @@ use Magento\Framework\ObjectManagerInterface;
 use Magento\Quote\Api\CartManagementInterface;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Api\PaymentMethodManagementInterface;
+use Magento\Sales\Api\CreditmemoRepositoryInterface;
+use Magento\Sales\Api\Data\CreditmemoInterface;
 use Magento\Sales\Api\Data\InvoiceInterface;
 use Magento\Sales\Api\Data\OrderInterface;
+use Magento\Sales\Api\Data\ShipmentInterface;
 use Magento\Sales\Api\InvoiceOrderInterface;
 use Magento\Sales\Api\InvoiceRepositoryInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
+use Magento\Sales\Api\RefundOrderInterface;
+use Magento\Sales\Api\ShipmentRepositoryInterface;
+use Magento\Sales\Api\ShipOrderInterface;
 use Magento\TestFramework\Helper\Bootstrap;
 use ReflectionProperty;
 
@@ -70,6 +76,20 @@ trait QuoteExtendedTestTrait
         $invoiceId = $this->om()->get(InvoiceOrderInterface::class)->execute((int)$order->getEntityId());
 
         return $this->om()->create(InvoiceRepositoryInterface::class)->get((int)$invoiceId);
+    }
+
+    protected function createShipment(OrderInterface $order): ShipmentInterface
+    {
+        $shipmentId = $this->om()->get(ShipOrderInterface::class)->execute((int)$order->getEntityId());
+
+        return $this->om()->create(ShipmentRepositoryInterface::class)->get((int)$shipmentId);
+    }
+
+    protected function createCreditmemo(OrderInterface $order): CreditmemoInterface
+    {
+        $creditmemoId = $this->om()->get(RefundOrderInterface::class)->execute((int)$order->getEntityId());
+
+        return $this->om()->create(CreditmemoRepositoryInterface::class)->get((int)$creditmemoId);
     }
 
     protected static function addQuoteExtendedTestColumn(string $column, int $length = 255): void

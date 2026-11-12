@@ -16,14 +16,19 @@ use Magento\Checkout\Test\Fixture\SetShippingAddress as SetShippingAddressFixtur
 use Magento\Quote\Test\Fixture\AddProductToCart as AddProductToCartFixture;
 use Magento\Quote\Test\Fixture\GuestCart as GuestCartFixture;
 use Magento\Sales\Model\Order\Email\Container\Template as TemplateContainer;
+use Magento\Framework\DataObject;
+use Magento\Framework\Event\ManagerInterface as EventManagerInterface;
+use Magento\Sales\Model\Order\Email\Sender\CreditmemoSender;
 use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
 use Magento\Sales\Model\Order\Email\Sender\OrderSender;
+use Magento\Sales\Model\Order\Email\Sender\ShipmentSender;
 use Magento\TestFramework\Fixture\AppArea;
 use Magento\TestFramework\Fixture\DataFixture;
 use Magento\TestFramework\Fixture\DataFixtureStorage;
 use Magento\TestFramework\Fixture\DataFixtureStorageManager;
 use Magento\TestFramework\Fixture\DbIsolation;
 use Magento\TestFramework\Helper\Bootstrap;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[
@@ -70,6 +75,58 @@ class AddQuoteExtendedToEmailVarsTest extends TestCase
         Bootstrap::getObjectManager()->get(InvoiceSender::class)->send($invoice, true);
 
         $this->assertTemplateVariable((int)$saved->getId());
+    }
+
+    public function testShipmentEmailContainsVariable(): void
+    {
+        $cartId = $this->getCartId();
+        $saved = $this->saveQuoteExtended($cartId);
+        $shipment = $this->createShipment($this->placeOrder($cartId));
+
+        Bootstrap::getObjectManager()->get(ShipmentSender::class)->send($shipment, true);
+
+        $this->assertTemplateVariable((int)$saved->getId());
+    }
+
+    public function testCreditmemoEmailContainsVariable(): void
+    {
+        $cartId = $this->getCartId();
+        $saved = $this->saveQuoteExtended($cartId);
+        $order = $this->placeOrder($cartId);
+        $this->createInvoice($order);
+        $creditmemo = $this->createCreditmemo($order);
+
+        Bootstrap::getObjectManager()->get(CreditmemoSender::class)->send($creditmemo, true);
+
+        $this->assertTemplateVariable((int)$saved->getId());
+    }
+
+    #[DataProvider('getEmailEvents')]
+    public function testObserverIsRegisteredForEmailEvent(string $eventName): void
+    {
+        $cartId = $this->getCartId();
+        $saved = $this->saveQuoteExtended($cartId);
+        $order = $this->placeOrder($cartId);
+
+        $transportObject = new DataObject(['order' => $order]);
+        Bootstrap::getObjectManager()->get(EventManagerInterface::class)->dispatch(
+            $eventName,
+            ['transport' => $transportObject->getData(), 'transportObject' => $transportObject]
+        );
+
+        $quoteExtended = $transportObject->getData(AddQuoteExtendedToEmailVars::TEMPLATE_VARIABLE);
+        $this->assertInstanceOf(QuoteExtended::class, $quoteExtended);
+        $this->assertSame((int)$saved->getId(), (int)$quoteExtended->getId());
+    }
+
+    public static function getEmailEvents(): array
+    {
+        return [
+            'order' => ['email_order_set_template_vars_before'],
+            'invoice' => ['email_invoice_set_template_vars_before'],
+            'shipment' => ['email_shipment_set_template_vars_before'],
+            'creditmemo' => ['email_creditmemo_set_template_vars_before'],
+        ];
     }
 
     public function testOrderEmailFindsRowNotLinkedYet(): void

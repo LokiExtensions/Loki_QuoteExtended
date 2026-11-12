@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Loki\QuoteExtended\Test\Integration\ViewModel\Adminhtml;
 
+use Loki\QuoteExtended\Config\LabelledColumns;
 use Loki\QuoteExtended\Test\Integration\Trait\QuoteExtendedTestTrait;
 use Loki\QuoteExtended\ViewModel\Adminhtml\OrderQuoteExtendedView;
 use Magento\Catalog\Test\Fixture\Product as ProductFixture;
@@ -38,6 +39,24 @@ class OrderQuoteExtendedViewTest extends TestCase
 {
     use QuoteExtendedTestTrait;
 
+    private const COLUMN_A = 'loki_labelled_test_a';
+    private const COLUMN_B = 'loki_labelled_test_b';
+    private const COLUMN_UNREGISTERED = 'loki_labelled_test_unregistered';
+
+    public static function setUpBeforeClass(): void
+    {
+        self::addQuoteExtendedTestColumn(self::COLUMN_A);
+        self::addQuoteExtendedTestColumn(self::COLUMN_B);
+        self::addQuoteExtendedTestColumn(self::COLUMN_UNREGISTERED);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::dropQuoteExtendedTestColumn(self::COLUMN_A);
+        self::dropQuoteExtendedTestColumn(self::COLUMN_B);
+        self::dropQuoteExtendedTestColumn(self::COLUMN_UNREGISTERED);
+    }
+
     protected function tearDown(): void
     {
         $this->setParams([]);
@@ -66,6 +85,44 @@ class OrderQuoteExtendedViewTest extends TestCase
 
         $this->assertSame((string)$saved->getId(), $viewModel->getValue('entity_id'));
         $this->assertSame((string)$order->getEntityId(), $viewModel->getValue('order_id'));
+    }
+
+    public function testGetValueOnShipmentPage(): void
+    {
+        $saved = $this->saveQuoteExtended($this->getCartId());
+        $order = $this->placeOrder($this->getCartId());
+        $shipment = $this->createShipment($order);
+
+        $this->setParams(['shipment_id' => (int)$shipment->getEntityId()]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+
+        $this->assertSame((string)$saved->getId(), $viewModel->getValue('entity_id'));
+        $this->assertSame((string)$order->getEntityId(), $viewModel->getValue('order_id'));
+    }
+
+    public function testGetValueOnCreditmemoPage(): void
+    {
+        $saved = $this->saveQuoteExtended($this->getCartId());
+        $order = $this->placeOrder($this->getCartId());
+        $this->createInvoice($order);
+        $creditmemo = $this->createCreditmemo($order);
+
+        $this->setParams(['creditmemo_id' => (int)$creditmemo->getEntityId()]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+
+        $this->assertSame((string)$saved->getId(), $viewModel->getValue('entity_id'));
+        $this->assertSame((string)$order->getEntityId(), $viewModel->getValue('order_id'));
+    }
+
+    public function testGetValueForUnknownShipmentAndCreditmemo(): void
+    {
+        $this->setParams(['shipment_id' => 999999]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+        $this->assertSame('', $viewModel->getValue('entity_id'));
+
+        $this->setParams(['creditmemo_id' => 999999]);
+        $viewModel = Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class);
+        $this->assertSame('', $viewModel->getValue('entity_id'));
     }
 
     public function testEachOrderShowsOwnRowAfterQuoteRestored(): void
@@ -112,10 +169,60 @@ class OrderQuoteExtendedViewTest extends TestCase
         $this->assertSame('', $viewModel->getValue('entity_id'));
     }
 
+    public function testGetLabelledValuesReturnsOnlyRegisteredNonEmptyValues(): void
+    {
+        $this->saveQuoteExtended($this->getCartId(), [
+            self::COLUMN_A => 'foo',
+            self::COLUMN_B => '',
+            self::COLUMN_UNREGISTERED => 'bar',
+        ]);
+        $order = $this->placeOrder($this->getCartId());
+
+        $this->setParams(['order_id' => (int)$order->getEntityId()]);
+        $viewModel = $this->createViewModelWithLabelledColumns();
+
+        $this->assertSame([['label' => 'Label A', 'value' => 'foo']], $viewModel->getLabelledValues());
+    }
+
+    public function testGetLabelledValuesKeepsConfiguredOrder(): void
+    {
+        $this->saveQuoteExtended($this->getCartId(), [self::COLUMN_A => 'foo', self::COLUMN_B => 'bar']);
+        $order = $this->placeOrder($this->getCartId());
+
+        $this->setParams(['order_id' => (int)$order->getEntityId()]);
+        $viewModel = $this->createViewModelWithLabelledColumns();
+
+        $this->assertSame([
+            ['label' => 'Label B', 'value' => 'bar'],
+            ['label' => 'Label A', 'value' => 'foo'],
+        ], $viewModel->getLabelledValues());
+    }
+
+    public function testGetLabelledValuesForOrderWithoutRow(): void
+    {
+        $order = $this->placeOrder($this->getCartId());
+
+        $this->setParams(['order_id' => (int)$order->getEntityId()]);
+        $viewModel = $this->createViewModelWithLabelledColumns();
+
+        $this->assertSame([], $viewModel->getLabelledValues());
+    }
+
+    private function createViewModelWithLabelledColumns(): OrderQuoteExtendedView
+    {
+        $labelledColumns = Bootstrap::getObjectManager()->create(LabelledColumns::class, [
+            'columns' => [self::COLUMN_B => 'Label B', self::COLUMN_A => 'Label A', 'entity_id' => 'Entity'],
+        ]);
+
+        return Bootstrap::getObjectManager()->create(OrderQuoteExtendedView::class, [
+            'labelledColumns' => $labelledColumns,
+        ]);
+    }
+
     private function setParams(array $params): void
     {
         $request = Bootstrap::getObjectManager()->get(RequestInterface::class);
-        foreach (['order_id', 'invoice_id'] as $name) {
+        foreach (['order_id', 'invoice_id', 'shipment_id', 'creditmemo_id'] as $name) {
             $request->setParam($name, $params[$name] ?? null);
         }
     }

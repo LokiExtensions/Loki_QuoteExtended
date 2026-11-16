@@ -101,6 +101,7 @@ jobs:
         run: |
           echo "COMPOSER_NAME=$(jq -er '.name' composer.json)" >> "$GITHUB_ENV"
           echo "MAGENTO_MODULE=$(jq -er '.module_name' MODULE.json)" >> "$GITHUB_ENV"
+          echo "MAGENTO_MODULE_FOLDER=/tmp/magento/vendor/$(jq -er '.name' composer.json)" >> "$GITHUB_ENV"
 
       - name: Configure Composer
         env:
